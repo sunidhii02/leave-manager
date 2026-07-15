@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+
+Disallow: /api/
+Disallow: /dashboard/
+Disallow: /admin/
+Disallow: /requests/
+
+Sitemap: https://leaveflow.vercel.app/sitemap.xml
