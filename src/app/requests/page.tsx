@@ -7,6 +7,10 @@ interface LeaveType { _id: string; name: string; }
 interface LeaveRequest { _id: string; leaveTypeId: string; startDate: string; endDate: string; reason: string; status: string; }
 interface UserPayload { _id: string; name: string; role: string; }
 
+function formatDate(dateString: string) {
+  return new Date(dateString).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
 export default function RequestsPage() {
   const router = useRouter();
   const [user, setUser] = useState<UserPayload | null>(null);
@@ -14,7 +18,8 @@ export default function RequestsPage() {
   const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([]);
   const [form, setForm] = useState({ leaveTypeId: "", startDate: "", endDate: "", reason: "" });
   const [message, setMessage] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("leaveflow-token");
@@ -35,7 +40,8 @@ export default function RequestsPage() {
         return fetch("/api/leave-requests", { headers: { Authorization: `Bearer ${token}` } });
       })
       .then((response) => response?.json())
-      .then((data) => setRequests(data?.requests || []));
+      .then((data) => setRequests(data?.requests || []))
+      .finally(() => setLoading(false));
 
     fetch("/api/leave-types")
       .then((response) => response.json())
@@ -47,7 +53,7 @@ export default function RequestsPage() {
     const token = localStorage.getItem("leaveflow-token");
     if (!token || !user) return;
 
-    setLoading(true);
+    setSubmitting(true);
     setMessage("");
 
     const response = await fetch("/api/leave-requests", {
@@ -57,7 +63,7 @@ export default function RequestsPage() {
     });
 
     const data = await response.json();
-    setLoading(false);
+    setSubmitting(false);
 
     if (!response.ok) {
       setMessage(data.message || "Failed to submit request");
@@ -69,6 +75,25 @@ export default function RequestsPage() {
     const refreshed = await fetch("/api/leave-requests", { headers: { Authorization: `Bearer ${token}` } });
     const refreshedData = await refreshed.json();
     setRequests(refreshedData.requests || []);
+  }
+
+  if (loading) {
+    return (
+      <section className="space-y-6">
+        <div className="rounded-3xl border border-white/10 bg-slate-900/80 p-6">
+          <div className="h-4 w-40 animate-pulse rounded bg-slate-700" />
+          <div className="mt-3 h-8 w-56 animate-pulse rounded bg-slate-700" />
+        </div>
+        <div className="rounded-3xl border border-white/10 bg-slate-900/80 p-6">
+          <div className="h-6 w-48 animate-pulse rounded bg-slate-700" />
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-24 animate-pulse rounded-2xl bg-slate-700" />
+            ))}
+          </div>
+        </div>
+      </section>
+    );
   }
 
   return (
@@ -107,30 +132,33 @@ export default function RequestsPage() {
             <input type="date" value={form.endDate} onChange={(event) => setForm({ ...form, endDate: event.target.value })} className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-800 px-4 py-3 text-slate-100" />
           </label>
         </div>
-        <button type="submit" disabled={loading} className="rounded-full bg-indigo-500 px-4 py-2 font-medium text-slate-950 disabled:opacity-60">
-          {loading ? "Submitting..." : "Submit request"}
+        <button type="submit" disabled={submitting} className="rounded-full bg-indigo-500 px-4 py-2 font-medium text-slate-950 transition hover:bg-indigo-400 disabled:opacity-60">
+          {submitting ? "Submitting..." : "Submit request"}
         </button>
         {message ? <p className="text-sm text-indigo-300">{message}</p> : null}
       </form>
 
       <div className="grid gap-4 md:grid-cols-2">
-        {requests.map((request) => {
-          const leaveType = leaveTypes.find((type) => type._id === request.leaveTypeId);
-  function formatDate(dateString: string) {
-    return new Date(dateString).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-  }
-
-  return (
-            <article key={request._id} className="rounded-2xl border border-white/10 bg-slate-900/80 p-4">
-              <div className="flex items-center justify-between">
-                <h2 className="font-semibold text-white">{leaveType?.name || "Leave request"}</h2>
-                <span className="rounded-full bg-slate-700 px-2.5 py-1 text-xs uppercase tracking-[0.25em] text-slate-300">{request.status}</span>
-              </div>
-              <p className="mt-3 text-sm text-slate-400">{request.reason}</p>
-              <p className="mt-3 text-sm text-slate-300">{formatDate(request.startDate)} → {formatDate(request.endDate)}</p>
-            </article>
-          );
-        })}
+        {requests.length === 0 ? (
+          <div className="col-span-full rounded-3xl border border-white/10 bg-slate-900/80 py-12 text-center">
+            <p className="text-slate-400">No leave requests yet</p>
+            <p className="mt-2 text-sm text-slate-500">Use the form above to submit your first request.</p>
+          </div>
+        ) : (
+          requests.map((request) => {
+            const leaveType = leaveTypes.find((type) => type._id === request.leaveTypeId);
+            return (
+              <article key={request._id} className="rounded-2xl border border-white/10 bg-slate-900/80 p-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="font-semibold text-white">{leaveType?.name || "Leave request"}</h2>
+                  <span className="rounded-full bg-slate-700 px-2.5 py-1 text-xs uppercase tracking-[0.25em] text-slate-300">{request.status}</span>
+                </div>
+                <p className="mt-3 text-sm text-slate-400">{request.reason}</p>
+                <p className="mt-3 text-sm text-slate-300">{formatDate(request.startDate)} → {formatDate(request.endDate)}</p>
+              </article>
+            );
+          })
+        )}
       </div>
     </section>
   );

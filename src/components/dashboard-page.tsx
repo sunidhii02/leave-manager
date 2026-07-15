@@ -13,6 +13,7 @@ export function DashboardPage() {
   const [requests, setRequests] = useState<LeaveRequest[]>([]);
   const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
   useEffect(() => {
@@ -40,6 +41,7 @@ export function DashboardPage() {
         const requestData = await requestResponse.json();
         setRequests(requestData.requests || []);
       })
+      .catch(() => setError("Unable to load workspace data. Please try again."))
       .finally(() => setLoading(false));
 
     fetch("/api/leave-types")
@@ -78,7 +80,38 @@ export function DashboardPage() {
   }), [requests]);
 
   if (loading) {
-    return <p className="text-slate-300">Loading your workspace...</p>;
+    return (
+      <section className="space-y-6">
+        <div className="rounded-3xl border border-white/10 bg-slate-900/80 p-6 shadow-2xl shadow-black/30">
+          <div className="h-4 w-32 animate-pulse rounded bg-slate-700" />
+          <div className="mt-3 h-8 w-64 animate-pulse rounded bg-slate-700" />
+          <div className="mt-2 h-4 w-96 animate-pulse rounded bg-slate-700" />
+        </div>
+        <div className="grid gap-4 md:grid-cols-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="rounded-2xl border border-white/10 bg-slate-900/80 p-5">
+              <div className="h-4 w-24 animate-pulse rounded bg-slate-700" />
+              <div className="mt-2 h-8 w-12 animate-pulse rounded bg-slate-700" />
+            </div>
+          ))}
+        </div>
+      </section>
+    );
+  }
+
+  if (error) {
+    return (
+      <section className="rounded-3xl border border-white/10 bg-slate-900/80 p-8 text-center shadow-2xl shadow-black/30">
+        <p className="text-lg text-white">Something went wrong</p>
+        <p className="mt-2 text-sm text-slate-400">{error}</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="mt-6 rounded-full bg-indigo-500 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-indigo-400"
+        >
+          Try again
+        </button>
+      </section>
+    );
   }
 
   return (
@@ -121,7 +154,15 @@ export function DashboardPage() {
 
         <div className="space-y-3 p-6">
           {message ? <p className="text-sm text-indigo-300">{message}</p> : null}
-          {requests.map((request) => {
+          {requests.length === 0 ? (
+            <div className="py-8 text-center">
+              <p className="text-slate-400">No leave requests yet</p>
+              <a href="/requests" className="mt-4 inline-block rounded-full bg-indigo-500 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-indigo-400">
+                Submit your first request
+              </a>
+            </div>
+          ) : (
+            requests.map((request) => {
             const leaveType = leaveTypes.find((type) => type._id === request.leaveTypeId);
             return (
               <div key={request._id} className="rounded-2xl border border-white/10 bg-slate-800/70 p-4">
@@ -143,7 +184,8 @@ export function DashboardPage() {
                 ) : null}
               </div>
             );
-          })}
+            })
+          )}
         </div>
       </div>
     </section>
