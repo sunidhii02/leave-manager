@@ -4,7 +4,6 @@
 
 ![Landing page](docs/screenshots/hero.png)
 
-[![CI](https://github.com/your-username/leaveflow/actions/workflows/ci.yml/badge.svg)](https://github.com/your-username/leaveflow/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-indigo.svg)](LICENSE)
 
 **Live demo → https://leaveflow.vercel.app**
